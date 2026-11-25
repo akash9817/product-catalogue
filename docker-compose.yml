@@ -1,0 +1,39 @@
+# One command to run everything locally:  docker compose up --build
+#
+#   Web app:        http://localhost:8080
+#   Mailpit inbox:  http://localhost:8025  (sales emails land here)
+#   API (direct):   http://localhost:4000/api/health
+#
+# Optional overrides go in a .env file next to this one (see .env.example).
+
+services:
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025" # web UI for captured emails
+      - "1025:1025" # SMTP
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      PORT: 4000
+      FAKESTORE_BASE_URL: ${FAKESTORE_BASE_URL:-https://fakestoreapi.com}
+      CACHE_TTL_MS: ${CACHE_TTL_MS:-300000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_FROM: ${SMTP_FROM:-Catalogue <no-reply@catalogue.local>}
+      SALES_INBOX: ${SALES_INBOX:-sales@catalogue.local}
+    ports:
+      - "4000:4000"
+    depends_on:
+      - mailpit
+
+  web:
+    build:
+      context: ./web
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
